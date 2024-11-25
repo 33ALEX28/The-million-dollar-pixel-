@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The 50 Million Dollar Page</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/solana-web3.js/1.43.0/solana-web3.min.js"></script>
+</head>
+<body>
+    <h1>The 50 Million Dollar Page</h1>
+    <p>Click a pixel to buy it with Popcat tokens (1 Popcat = 1 pixel)</p>
+    <div id="pixel-grid" class="grid"></div>
+
+    <button id="connect-btn">Connect Wallet</button>
+    <script src="script.js"></script>
+</body>
+</html>
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    font-size: 36px;
+    margin-top: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(500, 1fr); /* 500 pikseli w jednym rzędzie */
+    gap: 1px;
+    max-width: 100%;
+    margin: 20px auto;
+    width: 90%;
+    justify-content: center;
+}
+
+.pixel {
+    width: 20px;
+    height: 20px;
+    background-color: lightgray;
+    cursor: pointer;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+// Solana Web3.js initialization
+const { Connection, PublicKey, SystemProgram, Transaction } = solanaWeb3;
+const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+let wallet = null;
+
+const gridElement = document.getElementById("pixel-grid");
+const numRows = 500;  // 500 wierszy
+const numCols = 100;  // 100 kolumn
+
+// Dynamically generate the grid
+for (let i = 0; i < numRows * numCols; i++) {
+    const pixel = document.createElement("div");
+    pixel.className = "pixel";
+    pixel.id = "pixel-" + i;
+    gridElement.appendChild(pixel);
+
+    pixel.onclick = () => {
+        if (wallet) {
+            buyPixel(i);
+        } else {
+            alert("Please connect your wallet first.");
+        }
+    };
+}
+
+// Connect to Phantom wallet
+async function connectWallet() {
+    if (window.solana && window.solana.isPhantom) {
+        try {
+            await window.solana.connect();
+            wallet = window.solana;
+            document.getElementById('connect-btn').textContent = "Wallet Connected!";
+            alert("Wallet connected!");
+        } catch (err) {
+            console.error("Connection failed", err);
+        }
+    } else {
+        alert("Please install Phantom wallet!");
+    }
+}
+
+document.getElementById('connect-btn').addEventListener('click', connectWallet);
+
+// Buy pixel with Popcat token
+async function buyPixel(pixelIndex) {
+    try {
+        // Create a transaction to transfer Popcat token
+        const transaction = new Transaction();
+        const price = 1;  // 1 Popcat = 1 pixel
+        const popcatTokenAddress = new PublicKey("YOUR_POPCAT_TOKEN_ADDRESS"); // Replace with actual Popcat token address
+
+        transaction.add(
+            SystemProgram.transfer({
+                fromPubkey: wallet.publicKey,
+                toPubkey: popcatTokenAddress,
+                lamports: price * 1000000000,  // Convert to lamports
+            })
+        );
+
+        const signature = await connection.sendTransaction(transaction, [wallet]);
+        await connection.confirmTransaction(signature);
+        alert("Pixel purchased!");
+        document.getElementById("pixel-" + pixelIndex).style.backgroundColor = "green"; // Mark as purchased
+    } catch (err) {
+        console.error("Purchase failed", err);
+        alert("Error purchasing pixel.");
+    }
+}
